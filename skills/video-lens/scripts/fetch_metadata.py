@@ -10,6 +10,15 @@ import re
 import subprocess
 import sys
 
+# Windows consoles default to a non-UTF-8 codepage (e.g. cp1252), which crashes
+# on non-ASCII video titles/descriptions unless PYTHONUTF8=1 is set beforehand.
+# Reconfigure explicitly so the script works regardless of caller environment.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 
 def _linkify(line):
     parts = []

@@ -32,6 +32,16 @@ import tempfile
 import time
 from urllib.parse import parse_qs, urlparse
 
+# Windows consoles default to a non-UTF-8 codepage (e.g. cp1252), which crashes
+# on non-ASCII output (e.g. tags/titles from earlier reports) unless
+# PYTHONUTF8=1 is set beforehand. Reconfigure explicitly so the script works
+# regardless of caller environment.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 REPORTS_DIR = pathlib.Path.home() / "Downloads" / "video-lens" / "reports"
 MANIFEST_PATH = pathlib.Path.home() / "Downloads" / "video-lens" / "manifest.json"

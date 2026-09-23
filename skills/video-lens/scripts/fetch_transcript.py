@@ -11,6 +11,15 @@ import re
 import sys
 import urllib.request
 
+# Windows consoles default to a non-UTF-8 codepage (e.g. cp1252), which crashes
+# on non-ASCII transcript text unless PYTHONUTF8=1 is set beforehand.
+# Reconfigure explicitly so the script works regardless of caller environment.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 
 def _json_str(raw):
     """Decode a captured JSON string body; fall back to the raw text."""

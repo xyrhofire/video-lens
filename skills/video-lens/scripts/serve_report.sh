@@ -14,7 +14,25 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-HTML_PATH="$1"
+# Normalize a possibly Windows-style path (C:\foo\bar, as e.g. render_report.py
+# prints on Windows) to POSIX form. Everything below does string-based
+# prefix/dirname/basename work that assumes forward slashes, so a raw
+# backslash path silently breaks it (wrong DIR/FILE, URL_PATH left unstripped).
+_to_posix() {
+  local p="$1"
+  if command -v cygpath &>/dev/null; then
+    cygpath -u "$p"
+    return
+  fi
+  p="${p//\\//}"
+  if [[ "$p" =~ ^([A-Za-z]):(.*)$ ]]; then
+    local drive="${BASH_REMATCH[1],,}"
+    p="/${drive}${BASH_REMATCH[2]}"
+  fi
+  printf '%s' "$p"
+}
+
+HTML_PATH="$(_to_posix "$1")"
 
 if [ ! -f "$HTML_PATH" ]; then
     echo "ERROR:SERVE_FILE_NOT_FOUND $HTML_PATH" >&2
@@ -33,7 +51,7 @@ PORT=8765
 
 # Use explicit root if provided (tilde-expanded by caller), else fall back to heuristic
 if [ $# -ge 2 ]; then
-  SERVE_DIR="$(cd "$2" && pwd)"
+  SERVE_DIR="$(cd "$(_to_posix "$2")" && pwd)"
   URL_PATH="${HTML_PATH#${SERVE_DIR}/}"
 elif [[ "$(basename "$DIR")" == "reports" ]]; then
   SERVE_DIR="$(dirname "$DIR")"
@@ -109,6 +127,13 @@ if [[ "${NO_BROWSER:-}" != "1" ]]; then
       open "$URL"
   elif command -v xdg-open &>/dev/null; then
       xdg-open "$URL"
+  elif command -v cmd.exe &>/dev/null; then
+      # Windows (Git Bash/MSYS). `start`'s first quoted arg is a window title,
+      # not the target, so pass an empty one. MSYS2_ARG_CONV_EXCL stops MSYS
+      # from mangling the URL as if it were a POSIX path to convert.
+      MSYS2_ARG_CONV_EXCL="*" cmd.exe /c start "" "$URL" &>/dev/null
+  elif command -v powershell.exe &>/dev/null; then
+      powershell.exe -NoProfile -Command "Start-Process '$URL'" &>/dev/null
   else
       echo "Open $URL in your browser"
   fi
